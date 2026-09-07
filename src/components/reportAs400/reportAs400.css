@@ -1,0 +1,21 @@
+/* ล็อกหัวตาราง */
+.sticky-top {
+  position: sticky;
+  top: 0;
+  background-color: #dadada !important;
+  z-index: 3;
+}
+
+/* ล็อกท้ายตาราง */
+.sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  background-color: #dadada !important;
+  z-index: 3;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.05); /* เพิ่มเงาให้ดูเหมือน Footer ลอยอยู่ */
+}
+
+/* แก้ไขปัญหาเส้นตารางหายเวลาทำ sticky */
+.table th, .table td {
+  background-clip: padding-box;
+}

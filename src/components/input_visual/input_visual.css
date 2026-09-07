@@ -1,0 +1,20 @@
+.overlay-vi {
+    position: fixed; /* or absolute */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8); /* สีพื้นหลังครอบคลุม */
+    z-index: 999; /* ค่าที่สูงเพื่อให้อยู่ด้านบนสุด */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+/* ล็อกหัวตาราง */
+.sticky-top {
+  position: sticky;
+  top: 0;
+  background-color: #dadada !important;
+  z-index: 3;
+}
