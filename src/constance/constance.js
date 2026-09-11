@@ -23,10 +23,12 @@ export const server = {
   GET_REQNO: `visual_in/countdate`,
   FIND_VISUAL_ALL: `visual_in/find_req`,
   IN_MASTER_RFID: `register-rfid/inRFID`,
-  GET_MASTER_RFID: `register-rfid/inRFID`,
+  GET_MASTER_RFID: `register-rfid/getMasterRfid`,
+  UPDATE_MASTER_RFID: `register-rfid/updateRFID`,
+  DELETE_MASTER_RFID: `register-rfid/deleteRFID`,
+  CHECK_MASTER_RFID: `register-rfid/checkRfid`,
 
   API_GET_DATA_WIP_STORE_MC_SHOP: `api_getData/getData`,
-
 };
 export const key = {
   LOGIN_PASSED: "LOGIN_PASSED",

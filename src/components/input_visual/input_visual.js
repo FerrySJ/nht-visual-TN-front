@@ -31,7 +31,39 @@ const Input_visual = () => {
   );
   const [mfg_date, setMfg_date] = useState(moment().format("YYYY-MM-DD"));
   const [oper, setOper] = useState("");
+  const [operatorName, setOperatorName] = useState("");
   const [loading, setLoading] = useState("off");
+  const operTimer = useRef(null);
+
+  const checkOperRfid = async (value) => {
+    if (!value) {
+      setOperatorName("");
+      return;
+    }
+    try {
+      let res = await httpClient.post(server.CHECK_MASTER_RFID, {
+        rfid: value,
+      });
+
+      if (res.data.message === "ok" && res.data.data) {
+        const found = res.data.data;
+        setOper(found.emp);
+        setOperatorName(`${found.fname || ""} ${found.lname || ""}`.trim());
+      } else {
+        setOper("");
+        setOperatorName("");
+        Swal.fire({
+          icon: "warning",
+          title: "ไม่พบข้อมูลบัตร RFID นี้ในระบบ",
+          text: "กรุณาลงทะเบียนบัตรที่หน้า Master RFID ก่อนใช้งาน",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
+    } catch (error) {
+      console.error("checkOperRfid error:", error);
+    }
+  };
 
   const handleInputChange = (e, index, column, cleanedValue = null) => {
     try {
@@ -319,14 +351,23 @@ const Input_visual = () => {
           </h3>
           <div className="row">
             <div className="col-md-auto">
-              <b>OPERATOR NAME :</b>
+              <b>OPERATOR RFID :</b>
             </div>
             <div className="col-md-3">
               <input
                 className="form-control form-control-sm"
-                placeholder="กรุณากรอกรหัสพนักงาน"
+                placeholder="กรุณา Scan RFID"
                 value={oper.toUpperCase()}
-                onChange={(e) => setOper(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  let value = e.target.value.toUpperCase().replace(/\s+/g, "");
+                  setOper(value);
+                  setOperatorName("");
+
+                  if (operTimer.current) clearTimeout(operTimer.current);
+                  operTimer.current = setTimeout(() => {
+                    checkOperRfid(value);
+                  }, 300);
+                }}
               />
             </div>
 
@@ -647,7 +688,7 @@ const Input_visual = () => {
                         if (oper === "") {
                           Swal.fire({
                             icon: "warning",
-                            title: "กรุณากรอก OPERATOR NAME",
+                            title: "กรุณา Scan บัตร RFID ของ Operator ให้ถูกต้อง",
                             showConfirmButton: false,
                             timer: 2000,
                           });
