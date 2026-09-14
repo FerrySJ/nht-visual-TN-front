@@ -6,6 +6,10 @@ import { httpClient } from "../../utils/HttpClient";
 
 const PAGE_SIZE = 50;
 
+const PAGE_ACCESS_USERNAME = "admin";
+const PAGE_ACCESS_PASSWORD = "tnadmin";
+const ACTION_CONFIRM_PASSWORD = "tnadmin";
+
 class Master_rfid extends Component {
   constructor(props) {
     super(props);
@@ -19,11 +23,69 @@ class Master_rfid extends Component {
       lname: "",
       search_keyword: "",
       current_page: 1,
+      authenticated: false,
+      login_user: "",
+      login_pass: "",
     };
   }
 
   componentDidMount = async () => {
-    this.getData();
+    const saved = sessionStorage.getItem("master_rfid_auth");
+    if (saved === "true") {
+      this.setState({ authenticated: true });
+      this.getData();
+    }
+  };
+
+  handleLogin = () => {
+    const { login_user, login_pass } = this.state;
+
+    if (
+      login_user === PAGE_ACCESS_USERNAME &&
+      login_pass === PAGE_ACCESS_PASSWORD
+    ) {
+      sessionStorage.setItem("master_rfid_auth", "true");
+      this.setState({ authenticated: true, login_user: "", login_pass: "" });
+      this.getData();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Username หรือ Password ไม่ถูกต้อง",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    }
+  };
+
+  // ยืนยัน password อีกครั้งก่อนทำ Edit/Update/Delete คืนค่า true ถ้าผ่าน
+  confirmActionPassword = async (actionLabel) => {
+    const { value: pwd, isConfirmed } = await Swal.fire({
+      title: `กรอกรหัสผ่านเพื่อยืนยัน${actionLabel}`,
+      input: "password",
+      inputPlaceholder: "รหัสผ่าน",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!isConfirmed) return false;
+
+    if (pwd !== ACTION_CONFIRM_PASSWORD) {
+      Swal.fire({
+        icon: "error",
+        title: "รหัสผ่านไม่ถูกต้อง",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  handleLogout = () => {
+    sessionStorage.removeItem("master_rfid_auth");
+    this.setState({ authenticated: false });
   };
 
   getData = async () => {
@@ -67,9 +129,16 @@ class Master_rfid extends Component {
       if (!emp || !rfid || !fname || !lname) {
         Swal.fire({
           icon: "warning",
-          text: "กรุณากรอกข้อมูลให้ครบถ้วน",
+          title: "กรุณากรอกข้อมูลให้ครบถ้วน",
+          showConfirmButton: false,
+          timer: 1500,
         });
         return;
+      }
+
+      if (mode === "edit") {
+        const passed = await this.confirmActionPassword("การแก้ไขข้อมูล");
+        if (!passed) return;
       }
 
       let res =
@@ -90,54 +159,80 @@ class Master_rfid extends Component {
       if (res.data.message === "ok") {
         Swal.fire({
           icon: "success",
-          text:
+          title:
             mode === "edit"
               ? "แก้ไขข้อมูลเรียบร้อยแล้ว"
               : "บันทึกข้อมูลเรียบร้อยแล้ว",
           showConfirmButton: false,
-          timer: 1200,
+          timer: 1500,
         });
         this.handleClear();
         this.getData();
       } else if (res.data.data === "dup_emp") {
-        Swal.fire({ icon: "error", text: "รหัสพนักงานนี้มีอยู่ในระบบแล้ว" });
+        Swal.fire({
+          icon: "error",
+          title: "รหัสพนักงานนี้มีอยู่ในระบบแล้ว",
+          showConfirmButton: false,
+          timer: 1500,
+        });
       } else if (res.data.data === "dup_rfid") {
-        Swal.fire({ icon: "error", text: "บัตร RFID นี้ถูกใช้งานแล้ว" });
+        Swal.fire({
+          icon: "error",
+          title: "บัตร RFID นี้ถูกใช้งานแล้ว",
+          showConfirmButton: false,
+          timer: 1500,
+        });
       } else {
         Swal.fire({
           icon: "error",
-          text: "เกิดข้อผิดพลาดในการบันทึกข้อมูล",
+          title: "เกิดข้อผิดพลาดในการบันทึกข้อมูล",
+          showConfirmButton: false,
+          timer: 1500,
         });
       }
     } catch (error) {
       console.error("Error saving data:", error);
-      Swal.fire({ icon: "error", text: "เกิดข้อผิดพลาดในการเชื่อมต่อระบบ" });
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการเชื่อมต่อระบบ",
+        showConfirmButton: false,
+        timer: 1500,
+      });
     }
   };
 
   handleDelete = (emp) => {
     Swal.fire({
       icon: "warning",
-      text: `ต้องการลบข้อมูลพนักงาน ${emp} ใช่หรือไม่?`,
+      title: `ต้องการลบข้อมูลพนักงาน ${emp} ใช่หรือไม่?`,
       showCancelButton: true,
       confirmButtonText: "ลบ",
       cancelButtonText: "ยกเลิก",
       confirmButtonColor: "#d33",
     }).then(async (result) => {
       if (!result.isConfirmed) return;
+
+      const passed = await this.confirmActionPassword("การลบข้อมูล");
+      if (!passed) return;
+
       try {
         let res = await httpClient.post(server.DELETE_MASTER_RFID, { emp });
         if (res.data.message === "ok") {
           Swal.fire({
             icon: "success",
-            text: "ลบข้อมูลเรียบร้อยแล้ว",
+            title: "ลบข้อมูลเรียบร้อยแล้ว",
             showConfirmButton: false,
-            timer: 1200,
+            timer: 1500,
           });
           if (this.state.emp === emp) this.handleClear();
           this.getData();
         } else {
-          Swal.fire({ icon: "error", text: "เกิดข้อผิดพลาดในการลบข้อมูล" });
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาดในการลบข้อมูล",
+            showConfirmButton: false,
+            timer: 1500,
+          });
         }
       } catch (error) {
         console.error("Error deleting data:", error);
@@ -245,7 +340,71 @@ class Master_rfid extends Component {
     ));
   };
 
+  renderLogin = () => {
+    return (
+      <div className="content-wrapper">
+        <div className="conent" id="font-web">
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ minHeight: "60vh" }}
+          >
+            <div className="card" style={{ maxWidth: "380px", width: "100%" }}>
+              <div className="card-body">
+                <h4 className="text-center mb-4">
+                  <b>Master RFID - Login</b>
+                </h4>
+
+                <div className="mb-3">
+                  <label className="fw-bold mb-1">Username</label>
+                  <input
+                    className="form-control form-control-sm"
+                    type="text"
+                    autoFocus
+                    value={this.state.login_user}
+                    onChange={(e) =>
+                      this.setState({ login_user: e.target.value })
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") this.handleLogin();
+                    }}
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="fw-bold mb-1">Password</label>
+                  <input
+                    className="form-control form-control-sm"
+                    type="password"
+                    value={this.state.login_pass}
+                    onChange={(e) =>
+                      this.setState({ login_pass: e.target.value })
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") this.handleLogin();
+                    }}
+                  />
+                </div>
+
+                <button
+                  className="btn btn-info text-white w-100 fw-bold"
+                  type="button"
+                  onClick={this.handleLogin}
+                >
+                  Login
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   render() {
+    if (!this.state.authenticated) {
+      return this.renderLogin();
+    }
+
     const { mode, current_page } = this.state;
 
     const filtered_data = this.getFilteredData();
@@ -257,9 +416,20 @@ class Master_rfid extends Component {
     return (
       <div className="content-wrapper">
         <div className="conent" id="font-web">
-          <h3 className="row justify-content-center">
-            <b>Master RFID</b>
-          </h3>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div style={{ width: "80px" }} />
+            <h3 className="mb-0">
+              <b>Master RFID</b>
+            </h3>
+            <button
+              className="btn btn-outline-danger btn-sm"
+              type="button"
+              onClick={this.handleLogout}
+            >
+              Logout
+            </button>
+          </div>
+
 
           <div className="card">
             <div className="card-body">
@@ -359,7 +529,7 @@ class Master_rfid extends Component {
               {/* search + page size bar */}
               <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 mb-3 bg-light border rounded">
                 <div className="d-flex align-items-center gap-2" style={{ minWidth: "260px", flex: "1 1 260px" }}>
-                  <span className="text-muted">🔍</span> 
+                  <span className="text-muted">🔍</span>
                   <input
                     className="form-control form-control-sm"
                     type="text"
